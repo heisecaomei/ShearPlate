@@ -1,0 +1,46 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="images/light/taskbar.png">images/light/taskbar.png</file>
+        <file alias="images/light/logo.png">images/light/logo.png</file>
+        <file alias="images/light/close_default.png">images/light/close_default.png</file>
+        <file alias="images/light/close_active.png">images/light/close_active.png</file>
+        <file alias="images/light/shortcut_default.png">images/light/shortcut_default.png</file>
+        <file alias="images/light/shortcut_active.png">images/light/shortcut_active.png</file>
+        <file alias="images/light/text.png">images/light/text.png</file>
+        <file alias="images/light/link.png">images/light/link.png</file>
+        <file alias="images/light/pin_default.png">images/light/pin_default.png</file>
+        <file alias="images/light/pin.png">images/light/pin.png</file>
+        <file alias="images/light/all_def.png">images/light/all_def.png</file>
+        <file alias="images/light/all.png">images/light/all.png</file>
+        <file alias="images/light/file_def.png">images/light/file_def.png</file>
+        <file alias="images/light/file.png">images/light/file.png</file>
+        <file alias="images/light/img_def.png">images/light/img_def.png</file>
+        <file alias="images/light/img.png">images/light/img.png</file>
+        <file alias="images/light/txt_def.png">images/light/txt_def.png</file>
+        <file alias="images/light/txt.png">images/light/txt.png</file>
+        <file alias="images/light/setting_def.png">images/light/setting_def.png</file>
+        <file alias="images/light/setting.png">images/light/setting.png</file>
+        <file alias="images/dark/taskbar.png">images/dark/taskbar.png</file>
+        <file alias="images/dark/logo.png">images/dark/logo.png</file>
+        <file alias="images/dark/close_default.png">images/dark/close_default.png</file>
+        <file alias="images/dark/close_active.png">images/dark/close_active.png</file>
+        <file alias="images/dark/shortcut_default.png">images/dark/shortcut_default.png</file>
+        <file alias="images/dark/shortcut_active.png">images/dark/shortcut_active.png</file>
+        <file alias="images/dark/text.png">images/dark/text.png</file>
+        <file alias="images/dark/link.png">images/dark/link.png</file>
+        <file alias="images/dark/pin_default.png">images/dark/pin_default.png</file>
+        <file alias="images/dark/pin.png">images/dark/pin.png</file>
+        <file alias="images/dark/all_def.png">images/dark/all_def.png</file>
+        <file alias="images/dark/all.png">images/dark/all.png</file>
+        <file alias="images/dark/file_def.png">images/dark/file_def.png</file>
+        <file alias="images/dark/file.png">images/dark/file.png</file>
+        <file alias="images/dark/img_def.png">images/dark/img_def.png</file>
+        <file alias="images/dark/img.png">images/dark/img.png</file>
+        <file alias="images/dark/txt_def.png">images/dark/txt_def.png</file>
+        <file alias="images/dark/txt.png">images/dark/txt.png</file>
+        <file alias="images/dark/setting_def.png">images/dark/setting_def.png</file>
+        <file alias="images/dark/setting.png">images/dark/setting.png</file>
+        <file alias="images/filelist.png">images/filelist.png</file>
+        <file alias="images/nothing.png">images/nothing.png</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,13 @@
+build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.user
+*.user.*
+.vscode/
+.idea/
+out/
+bin/
+*.zip
+build.ps1
