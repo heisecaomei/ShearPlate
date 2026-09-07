@@ -54,7 +54,6 @@ ClipboardApp::ClipboardApp(QObject *parent)
     connect(m_panel, &ClipboardPanel::deleteRequested, this, &ClipboardApp::onDeleteRequested);
     connect(m_panel, &ClipboardPanel::togglePinRequested, this, &ClipboardApp::onTogglePinRequested);
     connect(m_panel, &ClipboardPanel::panelHidden, this, [this]() { ClearPendingPaste(); });
-    connect(m_panel, &ClipboardPanel::settingsRequested, this, &ClipboardApp::onOpenSettings);
     connect(m_tray, &TrayController::openSettingsRequested, this, &ClipboardApp::onOpenSettings);
     connect(m_tray, &TrayController::quitRequested, this, &ClipboardApp::onQuit);
 
@@ -81,10 +80,10 @@ ClipboardApp::ClipboardApp(QObject *parent)
     });
     m_foregroundTimer->start(500);
 
-    // 面板隐藏时定期检查文件条目是否仍存在，不存在则删除（低频轮询，资源占用小）
+    // 每 30 秒检测文件/文件夹/图片条目的磁盘对象是否存在（见 onFileCheckTimer）
     m_fileCheckTimer = new QTimer(this);
     connect(m_fileCheckTimer, &QTimer::timeout, this, &ClipboardApp::onFileCheckTimer);
-    m_fileCheckTimer->start(10 * 1000);
+    m_fileCheckTimer->start(30 * 1000);
 
 #ifdef Q_OS_WIN
     // 剪贴板覆盖监听（WM_CLIPBOARDUPDATE）
@@ -163,7 +162,15 @@ void ClipboardApp::onClipCaptured(const ClipboardItem &item)
         if (m_model->itemAt(i).sameAs(item)) {
             ClipboardItem refreshed = m_model->itemAt(i);
             m_store->refreshTimestamp(refreshed);
-            m_model->refreshToTop(i);
+            if (refreshed.missing) {
+                // 曾因目标文件被删除而失效，现重新复制（内容已在剪贴板中说明磁盘对象已恢复）：
+                // 解除失效并以新内容身份置顶
+                refreshed.missing = false;
+                m_model->removeItemById(refreshed.id);
+                m_model->prependItem(refreshed);
+            } else {
+                m_model->refreshToTop(i);
+            }
             return;
         }
     }
@@ -177,6 +184,9 @@ void ClipboardApp::onClipCaptured(const ClipboardItem &item)
 
 void ClipboardApp::onPasteRequested(const ClipboardItem &item, bool cutAfterPaste)
 {
+    if (item.missing)
+        return; // 失效条目：禁止上屏/复制/打开
+
     // 取消之前的悬置（用户点击另一个条目）
     ClearPendingPaste();
 
@@ -261,29 +271,11 @@ void ClipboardApp::onCleanupTimer()
 
 void ClipboardApp::onFileCheckTimer()
 {
-    // 仅面板隐藏时检查，避免干扰正在查看/操作的用户
-    if (m_panel && m_panel->isVisible())
+    // 每 30 秒检测文件/文件夹/图片条目所指向的磁盘对象是否仍存在；
+    // 不存在则由模型标记为失效（灰色、不可点击复制/打开），并沉底显示（不删除）。
+    if (!m_model)
         return;
-
-    QStringList toRemove;
-    for (int i = 0; i < m_model->rowCount(); ++i) {
-        const ClipboardItem item = m_model->itemAt(i);
-        if (item.type != ClipboardItem::Files || item.filePaths.isEmpty())
-            continue;
-
-        bool missing = false;
-        for (const QString &p : item.filePaths) {
-            if (!QFileInfo::exists(p)) {
-                missing = true;
-                break;
-            }
-        }
-        if (missing)
-            toRemove << item.id;
-    }
-
-    for (const QString &id : toRemove)
-        onDeleteRequested(id);
+    m_model->updateMissingStates();
 }
 
 // ---------------- 等待焦点粘贴状态机 ----------------

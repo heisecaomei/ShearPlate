@@ -140,11 +140,16 @@ void ClipboardItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
 
     const bool hover = (option.state & QStyle::State_MouseOver);
     const bool selected = (option.state & QStyle::State_Selected);
+    const bool missing = item.missing;
 
     const ThemeColors tc = Theme::current();
     QColor bg = item.isPinned ? tc.pinnedBg : tc.cardBg;
     QColor border = item.isPinned ? tc.pinnedBorder : tc.cardBorder;
-    if (hover || selected) {
+    if (missing) {
+        // 失效统一普通底色；不响应 hover / 选中高亮
+        bg = tc.cardBg;
+        border = tc.cardBorder;
+    } else if (hover || selected) {
         bg = tc.cardBgHover;
         border = tc.cardBorderHover;
     }
@@ -153,9 +158,14 @@ void ClipboardItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
     painter->setBrush(bg);
     painter->drawRoundedRect(card, 8, 8);
 
+    // 失效：整体灰化（图标/文字降透明度），文字用次要色，不绘制图钉与打开图标
+    const QColor mainText = missing ? tc.textSecondary : tc.textPrimary;
+    if (missing)
+        painter->setOpacity(0.6);
+
     // 右上角图钉（12×12，随主题与置顶状态切换）
     const QIcon &pinIcon = item.isPinned ? m_pinIcon : m_pinDefaultIcon;
-    if (!pinIcon.isNull()) {
+    if (!missing && !pinIcon.isNull()) {
         QRect pinRect(int(card.right() - 24), int(card.top() + 6), 12, 12);
         pinIcon.paint(painter, pinRect);
     }
@@ -177,7 +187,7 @@ void ClipboardItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         const QRectF textRect(card.left() + 54, card.top() + 6,
                               card.width() - 54 - 12, card.height() - 12);
         painter->setFont(m_font);
-        painter->setPen(tc.textPrimary);
+        painter->setPen(mainText);
         painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter,
                           item.screenshot ? QStringLiteral("截图") : QStringLiteral("图片"));
     } else if (item.type == ClipboardItem::Files) {
@@ -197,7 +207,7 @@ void ClipboardItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         if (multi) {
             // 多文件：标题“共x个文件”顶部与 logo 对齐，标题结尾处 link 图标（点击才打开文件夹）
             painter->setFont(m_font);
-            painter->setPen(tc.textPrimary);
+            painter->setPen(mainText);
 
             const int linkIconSize = fm.height();
             const qreal titleTextWidth = textWidth - linkIconSize - 4;
@@ -205,7 +215,7 @@ void ClipboardItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
             painter->drawText(QRectF(textLeft, iconRect.top(), titleTextWidth, lineH),
                               Qt::AlignLeft | Qt::AlignTop, elidedTitle);
 
-            if (!m_linkIcon.isNull()) {
+            if (!missing && !m_linkIcon.isNull()) {
                 const qreal titleW = fm.horizontalAdvance(elidedTitle);
                 const QRect linkRect(int(textLeft + titleW + 4),
                                      int(iconRect.top()),
@@ -228,14 +238,14 @@ void ClipboardItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         } else {
             // 单文件：文件名结尾处 link 图标（点击打开所在目录并预选）
             painter->setFont(m_font);
-            painter->setPen(tc.textPrimary);
+            painter->setPen(mainText);
             const int linkIconSize = fm.height();
             const QRectF textRect(textLeft, card.top() + 6, textWidth, card.height() - 12);
             const qreal textW = textRect.width() - linkIconSize - 4;
             const QString elided = fm.elidedText(item.preview(), Qt::ElideRight, int(textW));
             painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
 
-            if (!m_linkIcon.isNull()) {
+            if (!missing && !m_linkIcon.isNull()) {
                 const qreal tw = fm.horizontalAdvance(elided);
                 const QRect linkRect(int(textRect.left() + tw + 4),
                                      int(textRect.center().y() - linkIconSize / 2.0),
@@ -266,12 +276,12 @@ void ClipboardItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         const qreal textWidth = isLink ? (textRect.width() - linkIconSize - 4) : textRect.width();
 
         painter->setFont(m_font);
-        painter->setPen(tc.textPrimary);
+        painter->setPen(mainText);
         const QString elided = fm.elidedText(item.preview(), Qt::ElideRight, int(textWidth));
         painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
 
         // 链接图标紧跟链接文字结尾，点击图标才打开链接
-        if (isLink && !m_linkIcon.isNull()) {
+        if (!missing && isLink && !m_linkIcon.isNull()) {
             const qreal textW = fm.horizontalAdvance(elided);
             QRect iconRect(int(textRect.left() + textW + 4),
                            int(textRect.center().y() - linkIconSize / 2.0),

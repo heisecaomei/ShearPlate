@@ -4,7 +4,6 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
-#include <QButtonGroup>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -93,8 +92,11 @@ ClipboardPanel::ClipboardPanel(QWidget *parent)
     connect(m_list, &QListView::clicked, this, [this](const QModelIndex &index) {
         if (!index.isValid() || !m_model)
             return;
+        const ClipboardItem item = m_model->itemAt(index.row());
+        if (item.missing)
+            return; // 失效条目不可上屏/复制
         const bool shift = QGuiApplication::keyboardModifiers() & Qt::ShiftModifier;
-        emit pasteRequested(m_model->itemAt(index.row()), shift);
+        emit pasteRequested(item, shift);
     });
     connect(m_list, &QWidget::customContextMenuRequested, this, &ClipboardPanel::onCustomContextMenu);
     connect(m_list, &ClipboardListView::openIconClicked, this, &ClipboardPanel::onOpenIconClicked);
@@ -127,59 +129,10 @@ ClipboardPanel::ClipboardPanel(QWidget *parent)
     m_stack->addWidget(m_list);
     m_stack->addWidget(m_emptyWidget);
 
-    // ---------- 主体：左侧分类栏 + 列表 ----------
-    auto *body = new QHBoxLayout();
+    // ---------- 主体：条目列表左右铺满整个面板 ----------
+    auto *body = new QVBoxLayout();
     body->setContentsMargins(0, 0, 0, 0);
     body->setSpacing(0);
-
-    m_catBar = new QWidget(this);
-    m_catBar->setFixedWidth(44);
-    auto *catLayout = new QVBoxLayout(m_catBar);
-    catLayout->setContentsMargins(8, 8, 8, 8); // 左右边距一致
-    catLayout->setSpacing(6);
-
-    auto *catGroup = new QButtonGroup(this);
-    catGroup->setExclusive(true);
-    m_catNames[0] = QStringLiteral("all");
-    m_catNames[1] = QStringLiteral("file");
-    m_catNames[2] = QStringLiteral("img");
-    m_catNames[3] = QStringLiteral("txt");
-    const QStringList catTips = { QStringLiteral("所有"), QStringLiteral("文件"),
-                                  QStringLiteral("图片"), QStringLiteral("文本") };
-    for (int i = 0; i < 4; ++i) {
-        auto *btn = new QToolButton(m_catBar);
-        btn->setCheckable(true);
-        btn->setAutoRaise(true);
-        btn->setFixedSize(28, 28);
-        btn->setIconSize(QSize(20, 20));
-        btn->setToolTip(catTips.at(i));
-        m_catButtons[i] = btn;
-        const int idx = i;
-        connect(btn, &QToolButton::toggled, this, [this, idx](bool on) {
-            m_catButtons[idx]->setIcon(on ? m_catIcons[idx] : m_catDefaultIcons[idx]);
-        });
-        catGroup->addButton(btn, i);
-        catLayout->addWidget(btn);
-    }
-    catLayout->addStretch(1);
-    catGroup->button(0)->setChecked(true); // 默认“所有”
-
-    // 底部设置按钮（hover 切换图标；点击弹设置面板，单例由外部保证）
-    m_settingsBtn = new HoverIconButton(loadThemedIcon(QStringLiteral("setting_def.png")),
-                                        loadThemedIcon(QStringLiteral("setting.png")),
-                                        m_catBar);
-    m_settingsBtn->setFixedSize(28, 28);
-    m_settingsBtn->setIconSize(QSize(20, 20));
-    m_settingsBtn->setToolTip(QStringLiteral("设置"));
-    connect(m_settingsBtn, &QToolButton::clicked, this, &ClipboardPanel::settingsRequested);
-    catLayout->addWidget(m_settingsBtn, 0, Qt::AlignHCenter);
-
-    connect(catGroup, qOverload<int>(&QButtonGroup::idClicked), this, [this](int id) {
-        if (m_model)
-            m_model->setFilterType(m_catFilters[id]);
-    });
-
-    body->addWidget(m_catBar);
     body->addLayout(m_stack, 1);
 
     root->addWidget(header);
@@ -225,26 +178,6 @@ void ClipboardPanel::refreshTheme()
     if (m_logoLabel)
         m_logoLabel->setPixmap(loadThemedPixmap(QStringLiteral("logo.png"), 18, 18));
 
-    if (m_catBar)
-        m_catBar->setStyleSheet(QStringLiteral(
-            "QToolButton{background:transparent;border:none;border-radius:6px;}"
-            "QToolButton:hover{background:%1;}")
-            .arg(c.cardBgHover.name()));
-
-    // 重载分类按钮图标（默认/选中，随主题）
-    for (int i = 0; i < 4; ++i) {
-        if (!m_catButtons[i])
-            continue;
-        m_catDefaultIcons[i] = loadThemedIcon(m_catNames[i] + QStringLiteral("_def.png"));
-        m_catIcons[i] = loadThemedIcon(m_catNames[i] + QStringLiteral(".png"));
-        m_catButtons[i]->setIcon(m_catButtons[i]->isChecked() ? m_catIcons[i] : m_catDefaultIcons[i]);
-    }
-
-    // 设置按钮图标随主题重载（默认 / hover）
-    if (m_settingsBtn)
-        m_settingsBtn->setIcons(loadThemedIcon(QStringLiteral("setting_def.png")),
-                                loadThemedIcon(QStringLiteral("setting.png")));
-
     if (m_delegate)
         m_delegate->reloadIcons();
 
@@ -278,6 +211,8 @@ void ClipboardPanel::onOpenIconClicked(const QModelIndex &index)
     if (!index.isValid() || !m_model)
         return;
     const ClipboardItem item = m_model->itemAt(index.row());
+    if (item.missing)
+        return; // 失效条目不可打开
 
     // 文本链接条目：点击图标打开网页 / 本地路径
     if (item.type == ClipboardItem::Text) {
@@ -436,14 +371,16 @@ void ClipboardPanel::onCustomContextMenu(const QPoint &pos)
 
     const ClipboardItem item = m_model->itemAt(index.row());
     QMenu menu(this);
-    QAction *pinAction = menu.addAction(item.isPinned ? QStringLiteral("取消置顶") : QStringLiteral("置顶"));
+    QAction *pinAction = nullptr;
+    if (!item.missing) // 失效条目不提供置顶（始终沉底）
+        pinAction = menu.addAction(item.isPinned ? QStringLiteral("取消置顶") : QStringLiteral("置顶"));
     QAction *deleteAction = menu.addAction(QStringLiteral("删除"));
     QAction *chosen = menu.exec(m_list->viewport()->mapToGlobal(pos));
 
-    if (chosen == pinAction)
-        emit togglePinRequested(item.id);
-    else if (chosen == deleteAction)
+    if (chosen && chosen == deleteAction)
         emit deleteRequested(item.id);
+    else if (pinAction && chosen == pinAction)
+        emit togglePinRequested(item.id);
 
     raise();
 }

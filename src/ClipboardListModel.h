@@ -35,6 +35,9 @@ public:
     ClipboardItem itemAt(int row) const;
     ClipboardItem itemById(const QString &id) const;
 
+    bool isMissingAt(int row) const; // 显示行条目当前是否被标记为失效
+    void updateMissingStates();      // 定时检测磁盘存在性；失效条目灰显并沉底
+
     // 分类过滤：-1 全部, 0 文本, 1 图片, 2 文件
     void setFilterType(int type);
     int filterType() const;
@@ -42,6 +45,7 @@ public:
 private:
     bool passFilter(const ClipboardItem &item) const;
     void rebuildDisplay();
+    void orderDisplayForMissing(); // 失效条目稳定沉底（置顶有效条目仍在最前）
 
     QList<ClipboardItem> m_items; // 全部条目
     QList<int> m_display;         // 显示顺序：显示行 → m_items 索引

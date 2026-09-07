@@ -17,9 +17,9 @@
 ClipboardListView::ClipboardListView(QWidget *parent)
     : QListView(parent)
 {
-    // 列表内容与面板圆角边缘留白，避免底部 item 卡片贴边/超出面板；
-    // 左侧不留 margin，与分类栏间距 = 分类栏右 padding，与分类栏左侧留白等宽
-    setViewportMargins(0, 6, 8, 10);
+    // 列表内容与面板圆角边缘留白，避免 item 卡片贴边/超出面板；
+    // 无分类栏：左右留白对称（内容由 delegate 卡片额外内缩 6px）
+    setViewportMargins(6, 6, 8, 10);
     // 不需要滚动条，鼠标滚轮即可上下滚动
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
@@ -57,7 +57,7 @@ void ClipboardListView::mouseMoveEvent(QMouseEvent *event)
     const QModelIndex idx = indexAt(event->pos());
     if (idx.isValid()) {
         const ClipboardItem item = idx.data(ClipboardListModel::ItemRole).value<ClipboardItem>();
-        if (item.type == ClipboardItem::Image && !item.imagePath.isEmpty()) {
+        if (item.type == ClipboardItem::Image && !item.missing && !item.imagePath.isEmpty()) {
             // 缩略图区域与 delegate 绘制一致：卡片内左侧 38×38
             const QRect card = visualRect(idx).adjusted(6, 5, -6, -6);
             const QRectF thumbRect(card.left() + 8,
@@ -87,8 +87,9 @@ void ClipboardListView::mouseReleaseEvent(QMouseEvent *event)
         const QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
             const ClipboardItem item = idx.data(ClipboardListModel::ItemRole).value<ClipboardItem>();
-            const bool hasOpenIcon = (item.type == ClipboardItem::Files)
-                || (item.type == ClipboardItem::Text && item.linkType() != ClipboardItem::NoLink);
+            const bool hasOpenIcon = !item.missing
+                && ((item.type == ClipboardItem::Files)
+                    || (item.type == ClipboardItem::Text && item.linkType() != ClipboardItem::NoLink));
             if (hasOpenIcon) {
                 auto *delegate = qobject_cast<ClipboardItemDelegate *>(itemDelegate());
                 if (delegate) {

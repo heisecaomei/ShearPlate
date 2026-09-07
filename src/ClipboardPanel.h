@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QIcon>
 #include <QWidget>
 
 #include "ClipboardItem.h"
@@ -8,11 +7,8 @@
 class ClipboardListModel;
 class ClipboardItemDelegate;
 class ClipboardListView;
-class HoverIconButton;
 class QStackedLayout;
 class QLabel;
-class QToolButton;
-class QButtonGroup;
 
 // 白色圆角悬浮面板：展示剪贴板历史，支持单击上屏、拖拽、右键删除。
 class ClipboardPanel : public QWidget
@@ -33,7 +29,6 @@ signals:
     void deleteRequested(const QString &id);
     void togglePinRequested(const QString &id);
     void panelHidden(); // 面板隐藏（用于取消等待粘贴）
-    void settingsRequested(); // 点击分类栏底部设置按钮
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -57,11 +52,4 @@ private:
     QLabel *m_emptyText = nullptr;
     QLabel *m_logoLabel = nullptr;
     QLabel *m_countLabel = nullptr;
-    QWidget *m_catBar = nullptr;
-    QToolButton *m_catButtons[4] = { nullptr, nullptr, nullptr, nullptr };
-    HoverIconButton *m_settingsBtn = nullptr;
-    QIcon m_catDefaultIcons[4];
-    QIcon m_catIcons[4];
-    QString m_catNames[4];   // "all","file","img","txt"
-    int m_catFilters[4] = { -1, 2, 1, 0 }; // 所有/文件/图片/文本
 };

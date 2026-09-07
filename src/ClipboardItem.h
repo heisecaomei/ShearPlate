@@ -28,6 +28,7 @@ public:
     QImage image;          // 暂存：捕获时的新图片
     bool screenshot = false; // 是否为截图
     bool isPinned = false; // 是否置顶
+    bool missing = false;  // 失效：所指向的磁盘文件/文件夹/图片已不存在（灰显、禁用、沉底）
 
     // 文件类型分类（用于多文件预览文案）
     static QString fileCategory(const QString &path)
@@ -125,6 +126,33 @@ public:
     QString firstFilePath() const
     {
         return filePaths.isEmpty() ? QString() : filePaths.first();
+    }
+
+    // 是否依赖磁盘对象（Files / Image；纯文本不参与存在性检测）
+    bool referencesDisk() const
+    {
+        if (type == Files)
+            return !filePaths.isEmpty();
+        if (type == Image)
+            return !imagePath.isEmpty();
+        return false;
+    }
+
+    // 底层磁盘对象（文件/文件夹/图片文件）是否全部仍存在
+    bool diskExists() const
+    {
+        if (type == Files) {
+            if (filePaths.isEmpty())
+                return false;
+            for (const QString &p : filePaths) {
+                if (!QFileInfo(p).exists())
+                    return false;
+            }
+            return true;
+        }
+        if (type == Image)
+            return !imagePath.isEmpty() && QFileInfo(imagePath).exists();
+        return true; // Text 无磁盘依赖，恒有效
     }
 
     // 是否使用 folder.png 图标：仅当剪贴板中为“多个不同类型”混合时；

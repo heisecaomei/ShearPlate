@@ -45,9 +45,13 @@ QVariant ClipboardListModel::data(const QModelIndex &index, int role) const
 
 Qt::ItemFlags ClipboardListModel::flags(const QModelIndex &index) const
 {
-    if (!index.isValid())
+    if (!index.isValid() || index.row() < 0 || index.row() >= m_display.size())
         return Qt::NoItemFlags;
-    return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled;
+
+    Qt::ItemFlags f = Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled;
+    if (m_items.at(m_display.at(index.row())).missing)
+        f &= ~(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled); // 失效：不可选中、不可拖拽复制
+    return f;
 }
 
 QStringList ClipboardListModel::mimeTypes() const
@@ -64,6 +68,9 @@ QMimeData *ClipboardListModel::mimeData(const QModelIndexList &indexes) const
         return nullptr;
 
     const ClipboardItem item = itemAt(indexes.first().row());
+    if (item.missing)
+        return nullptr; // 失效条目禁止复制/拖拽
+
     auto *mime = new QMimeData();
 
     if (item.type == ClipboardItem::Image) {
@@ -217,6 +224,14 @@ void ClipboardListModel::updateItem(const ClipboardItem &item)
         if (m_display.at(k) == i) { dispRow = k; break; }
     const bool nowVisible = passFilter(item);
 
+    if (m_items.at(i).missing && dispRow >= 0) {
+        // 失效条目始终沉底：不做置顶式移动，仅按失效/置顶规则重排并刷新
+        beginResetModel();
+        orderDisplayForMissing();
+        endResetModel();
+        return;
+    }
+
     if (dispRow >= 0 && nowVisible) {
         if (wasPinned == item.isPinned) {
             emit dataChanged(index(dispRow), index(dispRow));
@@ -292,4 +307,38 @@ void ClipboardListModel::rebuildDisplay()
         if (passFilter(m_items.at(i)))
             m_display.append(i);
     }
+}
+
+bool ClipboardListModel::isMissingAt(int row) const
+{
+    if (row < 0 || row >= m_display.size())
+        return false;
+    return m_items.at(m_display.at(row)).missing;
+}
+
+void ClipboardListModel::updateMissingStates()
+{
+    bool changed = false;
+    for (ClipboardItem &it : m_items) {
+        const bool nowMissing = it.referencesDisk() ? !it.diskExists() : false;
+        if (it.missing != nowMissing) {
+            it.missing = nowMissing;
+            changed = true;
+        }
+    }
+    if (!changed)
+        return;
+
+    beginResetModel();
+    orderDisplayForMissing();
+    endResetModel();
+}
+
+void ClipboardListModel::orderDisplayForMissing()
+{
+    // 稳定分层：有效在前、失效沉底；有效层内把置顶条目稳定提到最前（各层相对顺序保持不变）
+    auto notMissing = [this](int i) { return !m_items.at(i).missing; };
+    auto pinned = [this](int i) { return m_items.at(i).isPinned; };
+    auto it = std::stable_partition(m_display.begin(), m_display.end(), notMissing);
+    std::stable_partition(m_display.begin(), it, pinned);
 }
