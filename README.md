@@ -5,6 +5,15 @@
 > 纯本地运行，数据只保存在你自己的电脑上，不上传任何内容。
 
 ---
+<img width="666" height="598" alt="image" src="https://github.com/user-attachments/assets/bcfaf450-69ba-43df-8d11-1658ee4f50d3" />
+
+<img width="336" height="539" alt="image" src="https://github.com/user-attachments/assets/13a2b777-c049-4e52-bbf9-9d1849debf99" />
+
+<img width="343" height="540" alt="image" src="https://github.com/user-attachments/assets/af06340f-3e8a-4de7-9da2-f8500b1da544" />
+
+<img width="522" height="284" alt="image" src="https://github.com/user-attachments/assets/e0f1613d-5ac1-43d1-ba6f-f6f50401fc4e" />
+
+<img width="528" height="292" alt="image" src="https://github.com/user-attachments/assets/75ea6eab-164c-4809-8ef4-fe97803189b1" />
 
 ## ✨ 功能特性
 
