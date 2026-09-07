@@ -2,7 +2,7 @@
 ;  ShearPlate 安装脚本（Inno Setup 6）
 ;  用法：安装 Inno Setup 6 后，右键本文件 → Compile，或命令行：
 ;        ISCC.exe installer.iss
-;  生成：Output\ShearPlate-Setup.exe
+;  生成：releases\ShearPlate-Setup.exe
 ; ============================================================
 
 #define AppName "剪切板 (ShearPlate)"
@@ -19,7 +19,7 @@ AppPublisher={#AppPublisher}
 DefaultDirName={autopf}\ShearPlate
 DefaultGroupName={#AppName}
 ; 安装包输出目录与文件名
-OutputDir=Output
+OutputDir=releases
 OutputBaseFilename=ShearPlate-Setup
 ; 安装包图标（使用项目内的 exe 图标）
 SetupIconFile=images\favicon.ico

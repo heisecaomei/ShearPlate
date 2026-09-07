@@ -1,4 +1,4 @@
-build/
+# build/ 目录内容已作为发布构建产物提交到仓库根
 build-*/
 CMakeFiles/
 CMakeCache.txt
@@ -11,3 +11,14 @@ out/
 bin/
 *.zip
 build.ps1
+releases/
+Output/
+
+# build 目录中 CMake 构建内部文件不入库
+build/ShearPlate_autogen/
+build/.qt/
+build/build.ninja
+build/.ninja_deps
+build/.ninja_log
+build/app.rc
+build/build_log.txt
